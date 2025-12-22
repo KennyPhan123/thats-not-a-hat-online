@@ -16,7 +16,8 @@ const state = {
     roomCode: '',
     isHost: false,
     gameState: new GameState(),
-    dragHandler: null
+    dragHandler: null,
+    discardHistory: [] // Track discarded cards
 };
 
 // DOM Elements
@@ -271,6 +272,7 @@ function handleServerMessage(data) {
         case 'gameReset':
             state.gameState.deck = data.deck;
             state.gameState.players = data.players;
+            state.discardHistory = data.discardHistory || [];
             elements.gameOverModal.classList.add('hidden');
             renderGame();
             break;
@@ -349,6 +351,77 @@ function setupGameHandlers() {
             state.socket.send(JSON.stringify({ type: 'reset' }));
         }
     });
+
+    // Setup discard history modal
+    setupDiscardHistoryModal();
+}
+
+// Setup discard history modal
+function setupDiscardHistoryModal() {
+    // Add click handler to penalty zone
+    elements.penaltyZone.addEventListener('click', (e) => {
+        // Only show modal if not dragging
+        if (!e.target.closest('.card')) {
+            toggleDiscardHistory();
+        }
+    });
+}
+
+// Toggle discard history modal
+function toggleDiscardHistory() {
+    let modal = document.getElementById('discardHistoryModal');
+
+    if (modal) {
+        // Toggle existing modal
+        modal.classList.toggle('hidden');
+        if (!modal.classList.contains('hidden')) {
+            renderDiscardHistory();
+        }
+        return;
+    }
+
+    // Create modal
+    modal = document.createElement('div');
+    modal.id = 'discardHistoryModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content discard-history-modal">
+            <h2>Discard History</h2>
+            <div id="discardHistoryList" class="discard-history-list"></div>
+            <button id="closeDiscardHistory" class="btn btn-secondary">Close</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('closeDiscardHistory').addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+        }
+    });
+
+    renderDiscardHistory();
+}
+
+// Render discard history list
+function renderDiscardHistory() {
+    const list = document.getElementById('discardHistoryList');
+    if (!list) return;
+
+    if (state.discardHistory.length === 0) {
+        list.innerHTML = '<p class="no-discards">No cards discarded yet</p>';
+        return;
+    }
+
+    list.innerHTML = state.discardHistory.map((item, index) => `
+        <div class="discard-item">
+            <div class="discard-card" style="background-image: url(${item.card.front})"></div>
+            <span class="discard-player">${item.playerName}</span>
+        </div>
+    `).join('');
 }
 
 // === ACTIONS ===
@@ -444,11 +517,16 @@ function handleCardsSwapped(data) {
 }
 
 function handleCardDiscarded(data) {
-    const player = state.gameState.players.find(p => p.id === data.playerId);
-    if (player) {
-        player.cards[data.slotIndex] = null;
-        player.penalties = data.penalties;
+    // Sync full player state from server (includes normalized cards)
+    if (data.players) {
+        state.gameState.players = data.players;
     }
+
+    // Update discard history
+    if (data.discardHistory) {
+        state.discardHistory = data.discardHistory;
+    }
+
     renderGame();
 
     if (data.gameOver) {

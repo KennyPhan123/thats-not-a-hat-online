@@ -17,6 +17,7 @@ export default class GameServer {
         this.gameState = {
             players: [],
             deck: [],
+            discardHistory: [], // Track all discarded cards
             gameStarted: false,
             hostId: null
         };
@@ -228,6 +229,10 @@ export default class GameServer {
         fromPlayer.cards[data.fromSlot] = null;
         toPlayer.cards[data.toSlot] = card;
 
+        // Normalize both players' cards (shift single card to bottom)
+        this.normalizePlayerCards(fromPlayer);
+        this.normalizePlayerCards(toPlayer);
+
         this.broadcast({
             type: 'cardMoved',
             fromPlayerId: data.fromPlayerId,
@@ -239,10 +244,24 @@ export default class GameServer {
         });
     }
 
-    // Swap two cards within same player
+    // Normalize cards: if only 1 card, it should be in slot 0 (bottom)
+    normalizePlayerCards(player) {
+        if (player.cards[0] === null && player.cards[1] !== null) {
+            // Shift card from slot 1 to slot 0
+            player.cards[0] = player.cards[1];
+            player.cards[1] = null;
+        }
+    }
+
+    // Swap two cards within same player (only if both slots have cards)
     handleSwapCards(data, sender) {
         const player = this.gameState.players.find(p => p.id === data.playerId);
         if (!player) return;
+
+        // Only swap if both slots have cards
+        if (player.cards[0] === null || player.cards[1] === null) {
+            return; // Don't swap if only 1 card
+        }
 
         [player.cards[0], player.cards[1]] = [player.cards[1], player.cards[0]];
 
@@ -258,8 +277,21 @@ export default class GameServer {
         const player = this.gameState.players.find(p => p.id === data.playerId);
         if (!player || !player.cards[data.slotIndex]) return;
 
+        const discardedCard = player.cards[data.slotIndex];
+
+        // Add to discard history
+        this.gameState.discardHistory.push({
+            card: discardedCard,
+            playerId: player.id,
+            playerName: player.name,
+            timestamp: Date.now()
+        });
+
         player.cards[data.slotIndex] = null;
         player.penalties++;
+
+        // Normalize cards (shift remaining card to bottom)
+        this.normalizePlayerCards(player);
 
         const gameOver = player.penalties >= 3;
 
@@ -268,6 +300,8 @@ export default class GameServer {
             playerId: data.playerId,
             slotIndex: data.slotIndex,
             penalties: player.penalties,
+            discardHistory: this.gameState.discardHistory,
+            players: this.gameState.players,
             gameOver,
             loserName: gameOver ? player.name : null
         });
@@ -279,13 +313,17 @@ export default class GameServer {
             p.penalties = 0;
         });
 
+        // Clear discard history
+        this.gameState.discardHistory = [];
+
         const cards = this.generateCards();
         this.gameState.deck = shuffleArray(cards);
 
         this.broadcast({
             type: 'gameReset',
             deck: this.gameState.deck,
-            players: this.gameState.players
+            players: this.gameState.players,
+            discardHistory: []
         });
     }
 

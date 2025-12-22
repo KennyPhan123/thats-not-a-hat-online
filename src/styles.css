@@ -603,6 +603,63 @@ body {
 }
 
 /* ============================================
+   Discard History Modal
+   ============================================ */
+.discard-history-modal {
+  max-width: 400px;
+  max-height: 80vh;
+}
+
+.discard-history-modal h2 {
+  color: var(--accent-pink);
+  margin-bottom: 20px;
+}
+
+.discard-history-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 10px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.discard-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.discard-card {
+  width: 70px;
+  height: 44px;
+  background-size: cover;
+  background-position: center;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.discard-player {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  max-width: 70px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.no-discards {
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 20px;
+}
+
+/* ============================================
    Responsive
    ============================================ */
 @media (max-width: 600px) {
