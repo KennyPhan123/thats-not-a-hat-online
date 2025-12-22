@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>That's Not a Hat!</title>
+    <meta name="description" content="Interactive online card game - That's Not a Hat. Play with 2-8 players!">
+  <script type="module" crossorigin src="./assets/index-Ax5ICu08.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CcKrT2MY.css">
+</head>
+
+<body>
+    <!-- Lobby Screen -->
+    <div id="lobby" class="screen active">
+        <div class="lobby-container">
+            <h1 class="game-title">That's Not a Hat!</h1>
+            <p class="subtitle">Interactive sandbox for 2-8 players</p>
+
+            <!-- Main Menu - Create or Join -->
+            <div id="mainMenu" class="lobby-section">
+                <div class="menu-buttons">
+                    <button id="showCreate" class="btn btn-primary btn-large">Create Game</button>
+                    <button id="showJoin" class="btn btn-secondary btn-large">Join Game</button>
+                </div>
+            </div>
+
+            <!-- Create Game Form -->
+            <div id="createForm" class="lobby-section hidden">
+                <div class="form-card">
+                    <h3>Create New Game</h3>
+                    <div class="input-group">
+                        <label for="createName">Your Name</label>
+                        <input type="text" id="createName" placeholder="Enter your name" maxlength="12"
+                            autocomplete="off">
+                    </div>
+                    <button id="createRoom" class="btn btn-primary">Create Room</button>
+                    <button class="btn-link" id="backFromCreate">← Back to menu</button>
+                </div>
+            </div>
+
+            <!-- Join Game Form -->
+            <div id="joinForm" class="lobby-section hidden">
+                <div class="form-card">
+                    <h3>Join Existing Game</h3>
+                    <div class="input-group">
+                        <label for="joinName">Your Name</label>
+                        <input type="text" id="joinName" placeholder="Enter your name" maxlength="12"
+                            autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label for="roomCode">Room Code (4 letters)</label>
+                        <input type="text" id="roomCode" placeholder="ABCD" maxlength="4" autocomplete="off"
+                            class="code-input">
+                    </div>
+                    <button id="joinRoom" class="btn btn-secondary">Join Room</button>
+                    <button class="btn-link" id="backFromJoin">← Back to menu</button>
+                </div>
+            </div>
+
+            <!-- Room Info (after create/join) -->
+            <div id="roomInfo" class="room-info hidden">
+                <div class="code-display">
+                    <p class="code-label">Room Code</p>
+                    <div id="displayRoomCode" class="room-code-box"></div>
+                    <button id="copyCodeBtn" class="btn-copy">Tap to Copy</button>
+                </div>
+                <div class="players-section">
+                    <p>Players: <span id="playerCount">0</span>/8</p>
+                    <div id="playerList" class="player-list"></div>
+                </div>
+                <button id="startGame" class="btn btn-primary hidden">Start Game</button>
+                <p class="waiting-text">Waiting for host to start...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game" class="screen">
+        <div id="gameTable" class="game-table">
+            <!-- Deck in center -->
+            <div id="deck" class="deck">
+                <div class="deck-cards"></div>
+                <span class="deck-count">110</span>
+            </div>
+
+            <!-- Player slots will be added dynamically -->
+            <div id="playersContainer" class="players-container"></div>
+
+            <!-- Penalty zone -->
+            <div id="penaltyZone" class="penalty-zone">
+                <span class="penalty-text">Discard</span>
+            </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="gameOverModal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Game Over!</h2>
+                <p id="gameOverMessage"></p>
+                <button id="playAgain" class="btn btn-primary">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
