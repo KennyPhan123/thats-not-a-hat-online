@@ -291,8 +291,7 @@ function handleServerMessage(data) {
             break;
 
         case 'cardMoved':
-            state.gameState.players = data.players;
-            renderGame();
+            handleCardMoved(data);
             break;
 
         case 'cardsSwapped':
@@ -323,14 +322,6 @@ function handleServerMessage(data) {
             }
             break;
 
-        case 'dragSync':
-            handleDragSync(data);
-            break;
-
-        case 'dragEnd':
-            handleRemoteDragEnd(data);
-            break;
-
         case 'error':
             alert(data.message);
             break;
@@ -347,36 +338,10 @@ function startGame() {
     renderGame();
 }
 
-let lastDragEmit = 0;
-
 function setupDragHandler() {
     state.dragHandler = new DragHandler({
         container: elements.gameTable,
-        onDrop: handleDrop,
-        onDragStart: (dragData) => {},
-        onDragMove: (x, y, dragData) => {
-            if (!state.socket || !dragData) return;
-            const now = Date.now();
-            if (now - lastDragEmit < 30) return; // ~30fps max
-            lastDragEmit = now;
-
-            const player = state.gameState.players.find(p => p.id === dragData.fromPlayerId);
-            const card = player?.cards[dragData.fromSlot];
-            if (!card) return;
-
-            state.socket.send(JSON.stringify({
-                type: 'dragMove',
-                x: x / window.innerWidth,
-                y: y / window.innerHeight,
-                cardId: dragData.cardId,
-                cardFront: card.front
-            }));
-        },
-        onDragEnd: () => {
-            if (state.socket) {
-                state.socket.send(JSON.stringify({ type: 'dragEnd' }));
-            }
-        }
+        onDrop: handleDrop
     });
 }
 
@@ -677,37 +642,53 @@ function handleCardDiscarded(data) {
     }
 }
 
-// Drag Sync Handlers
-const ghostCards = new Map();
-
-function handleDragSync(data) {
-    let ghost = ghostCards.get(data.playerId);
-    if (!ghost) {
-        ghost = document.createElement('div');
-        ghost.className = 'ghost-drag-card';
-        ghost.style.backgroundImage = `url(${data.cardFront})`;
-        
-        const label = document.createElement('div');
-        label.className = 'ghost-drag-label';
-        label.textContent = `${data.playerName} đang di chuyển...`;
-        ghost.appendChild(label);
-        
-        document.body.appendChild(ghost);
-        ghostCards.set(data.playerId, ghost);
+function handleCardMoved(data) {
+    // Find the old card element
+    const oldPlayerSlot = document.querySelector(`.player-slot[data-player-id="${data.fromPlayerId}"]`);
+    const oldCardSlot = oldPlayerSlot?.querySelector(`.card-slot[data-slot-index="${data.fromSlot}"]`);
+    const oldCard = oldCardSlot?.querySelector('.card');
+    
+    let clone = null;
+    if (oldCard) {
+        const rect = oldCard.getBoundingClientRect();
+        clone = oldCard.cloneNode(true);
+        clone.style.position = 'fixed';
+        clone.style.left = `${rect.left}px`;
+        clone.style.top = `${rect.top}px`;
+        clone.style.margin = '0';
+        clone.style.zIndex = '9999';
+        clone.style.transition = 'all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        document.body.appendChild(clone);
     }
     
-    // Update position based on normalized coordinates
-    const px = data.x * window.innerWidth;
-    const py = data.y * window.innerHeight;
-    ghost.style.left = `${px}px`;
-    ghost.style.top = `${py}px`;
-}
-
-function handleRemoteDragEnd(data) {
-    const ghost = ghostCards.get(data.playerId);
-    if (ghost) {
-        ghost.remove();
-        ghostCards.delete(data.playerId);
+    // Update state and render
+    state.gameState.players = data.players;
+    renderGame();
+    
+    if (clone) {
+        // Find the new DOM position of the card
+        const newCard = document.querySelector(`.card[data-card-id="${data.card.id}"]`);
+        
+        if (newCard) {
+            newCard.style.opacity = '0'; // Hide real one during animation
+            
+            // Yield to allow DOM update
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    const newRect = newCard.getBoundingClientRect();
+                    clone.style.left = `${newRect.left}px`;
+                    clone.style.top = `${newRect.top}px`;
+                    clone.style.transform = ''; // Clear any perspective transform just in case
+                    
+                    setTimeout(() => {
+                        clone.remove();
+                        newCard.style.opacity = '1';
+                    }, 500);
+                });
+            });
+        } else {
+            clone.remove();
+        }
     }
 }
 

@@ -71,12 +71,6 @@ export default class GameServer {
                 case 'toggleHardMode':
                     this.handleToggleHardMode(data, sender);
                     break;
-                case 'dragMove':
-                    this.handleDragMove(data, sender);
-                    break;
-                case 'dragEnd':
-                    this.handleDragEnd(data, sender);
-                    break;
             }
         } catch (e) {
             console.error('Message parse error:', e);
@@ -285,31 +279,6 @@ export default class GameServer {
             slotCount: this.gameState.slotCount,
             players: this.gameState.players
         });
-    }
-
-    // Handle real-time drag sync
-    handleDragMove(data, sender) {
-        const player = this.gameState.players.find(p => p.id === sender.id);
-        if (!player) return;
-
-        // Broadcast directly using room.broadcast to exclude the sender
-        this.room.broadcast(JSON.stringify({
-            type: 'dragSync',
-            playerId: sender.id,
-            playerName: player.name,
-            x: data.x, // normalized x
-            y: data.y, // normalized y
-            cardId: data.cardId,
-            cardFront: data.cardFront
-        }), [sender.id]);
-    }
-
-    handleDragEnd(data, sender) {
-        // Broadcast drag end to all other players
-        this.room.broadcast(JSON.stringify({
-            type: 'dragEnd',
-            playerId: sender.id
-        }), [sender.id]);
     }
 
     // Swap two cards within same player (only if both slots have cards)
