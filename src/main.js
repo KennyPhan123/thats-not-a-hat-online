@@ -82,7 +82,7 @@ function setupLobbyHandlers() {
     elements.createRoom.addEventListener('click', () => {
         const name = elements.createName.value.trim();
         if (!name) {
-            alert('Please enter your name');
+            alert('Vui lòng nhập tên');
             return;
         }
         state.playerName = name;
@@ -96,11 +96,11 @@ function setupLobbyHandlers() {
         const name = elements.joinName.value.trim();
         const code = elements.roomCode.value.trim().toUpperCase();
         if (!name) {
-            alert('Please enter your name');
+            alert('Vui lòng nhập tên');
             return;
         }
         if (!code || code.length !== 4) {
-            alert('Please enter 4-letter room code');
+            alert('Vui lòng nhập mã phòng 4 ký tự');
             return;
         }
         state.playerName = name;
@@ -146,9 +146,9 @@ function copyRoomCode() {
     const copyBtn = document.getElementById('copyCodeBtn');
 
     navigator.clipboard.writeText(code).then(() => {
-        copyBtn.textContent = 'Copied!';
+        copyBtn.textContent = 'Đã sao chép!';
         setTimeout(() => {
-            copyBtn.textContent = 'Tap to Copy';
+            copyBtn.textContent = 'Nhấn để sao chép';
         }, 2000);
     }).catch(() => {
         // Fallback: select and copy
@@ -158,9 +158,9 @@ function copyRoomCode() {
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
-        copyBtn.textContent = 'Copied!';
+        copyBtn.textContent = 'Đã sao chép!';
         setTimeout(() => {
-            copyBtn.textContent = 'Tap to Copy';
+            copyBtn.textContent = 'Nhấn để sao chép';
         }, 2000);
     });
 }
@@ -222,7 +222,7 @@ function updatePlayerList() {
     const players = state.gameState.players;
     elements.playerCount.textContent = players.length;
     elements.playerList.innerHTML = players
-        .map(p => `<span class="player-tag${p.id === state.gameState.hostId ? ' host' : ''}">${p.name}${p.id === state.gameState.hostId ? ' (Host)' : ''}</span>`)
+        .map(p => `<span class="player-tag${p.id === state.gameState.hostId ? ' host' : ''}">${p.name}${p.id === state.gameState.hostId ? ' (Chủ phòng)' : ''}</span>`)
         .join('');
 
     // Show start button and hard mode toggle for host if enough players (minimum 2)
@@ -409,22 +409,52 @@ function setupGameHandlers() {
 
 // Toggle fullscreen mode
 function toggleFullscreen() {
-    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        // Enter fullscreen
-        const elem = document.documentElement;
-        if (elem.requestFullscreen) {
-            elem.requestFullscreen();
-        } else if (elem.webkitRequestFullscreen) {
-            elem.webkitRequestFullscreen(); // Safari/iOS
-        }
-    } else {
-        // Exit fullscreen
+    // Check if currently in fullscreen
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
         if (document.exitFullscreen) {
             document.exitFullscreen();
         } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen(); // Safari/iOS
+            document.webkitExitFullscreen();
         }
+        return;
     }
+
+    // Try native Fullscreen API
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(() => {
+            iosFullscreenFallback();
+        });
+    } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+    } else {
+        // iOS Safari fallback — no Fullscreen API available
+        iosFullscreenFallback();
+    }
+}
+
+// iOS fallback: minimize browser chrome + show guidance
+function iosFullscreenFallback() {
+    // Scroll trick to collapse Safari address bar
+    document.body.style.height = 'calc(100vh + 1px)';
+    window.scrollTo(0, 1);
+    setTimeout(() => {
+        document.body.style.height = '';
+    }, 100);
+
+    // Show toast with guidance
+    showToast('Thêm vào Màn hình chính để chơi toàn màn hình');
+}
+
+// Show a brief toast notification
+function showToast(message) {
+    const existing = document.querySelector('.game-notification');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = 'game-notification';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
 }
 
 // Setup discard history modal
@@ -457,9 +487,9 @@ function toggleDiscardHistory() {
     modal.className = 'modal';
     modal.innerHTML = `
         <div class="modal-content discard-history-modal">
-            <h2>Discard History</h2>
+            <h2>Lịch sử bỏ bài</h2>
             <div id="discardHistoryList" class="discard-history-list"></div>
-            <button id="closeDiscardHistory" class="btn btn-secondary">Close</button>
+            <button id="closeDiscardHistory" class="btn btn-secondary">Đóng</button>
         </div>
     `;
     document.body.appendChild(modal);
@@ -483,7 +513,7 @@ function renderDiscardHistory() {
     if (!list) return;
 
     if (state.discardHistory.length === 0) {
-        list.innerHTML = '<p class="no-discards">No cards discarded yet</p>';
+        list.innerHTML = '<p class="no-discards">Chưa có bài nào bị bỏ</p>';
         return;
     }
 
@@ -606,7 +636,7 @@ function handleCardDiscarded(data) {
 }
 
 function showGameOver(loserName) {
-    elements.gameOverMessage.textContent = `${loserName} got 3 penalties and lost!`;
+    elements.gameOverMessage.textContent = `${loserName} đã bị 3 lần phạt và thua cuộc!`;
     elements.gameOverModal.classList.remove('hidden');
 }
 
