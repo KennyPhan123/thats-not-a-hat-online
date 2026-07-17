@@ -1019,3 +1019,37 @@ body {
   border-color: var(--accent-soft);
   transform: scale(1.05);
 }
+
+/* ============================================
+   Real-time Drag Sync (Ghost Cards)
+   ============================================ */
+.ghost-drag-card {
+  position: fixed;
+  width: var(--card-width);
+  height: var(--card-height);
+  pointer-events: none;
+  z-index: 9000;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  opacity: 0.85;
+  transition: opacity 0.2s;
+  /* Center the ghost on the cursor */
+  transform: translate(-50%, -50%);
+}
+
+.ghost-drag-label {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text-primary);
+  color: var(--surface);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}

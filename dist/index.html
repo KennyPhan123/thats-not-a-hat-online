@@ -1,14 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>That's Not a Hat!</title>
-    <meta name="description" content="Interactive online card game - That's Not a Hat. Play with 2-8 players!">
-    <link rel="icon" type="image/png" href="./favicon.png">
-  <script type="module" crossorigin src="./assets/index-D1LaJENw.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-Cm6_6HXO.css">
+    <meta name="description" content="Game bài online - That's Not a Hat. Chơi cùng 2-8 người!">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="./assets/index-BImXqIId.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-NRdV1QnG.css">
 </head>
 
 <body>
@@ -16,68 +21,67 @@
     <div id="lobby" class="screen active">
         <div class="lobby-container">
             <h1 class="game-title">That's Not a Hat!</h1>
-            <p class="subtitle">Interactive sandbox for 2-8 players</p>
 
             <!-- Main Menu - Create or Join -->
             <div id="mainMenu" class="lobby-section">
                 <div class="menu-buttons">
-                    <button id="showCreate" class="btn btn-primary btn-large">Create Game</button>
-                    <button id="showJoin" class="btn btn-secondary btn-large">Join Game</button>
+                    <button id="showCreate" class="btn btn-primary btn-large">Tạo Phòng</button>
+                    <button id="showJoin" class="btn btn-secondary btn-large">Vào Phòng</button>
                 </div>
             </div>
 
             <!-- Create Game Form -->
             <div id="createForm" class="lobby-section hidden">
                 <div class="form-card">
-                    <h3>Create New Game</h3>
+                    <h3>Tạo Phòng Mới</h3>
                     <div class="input-group">
-                        <label for="createName">Your Name</label>
-                        <input type="text" id="createName" placeholder="Enter your name" maxlength="12"
+                        <label for="createName">Tên của bạn</label>
+                        <input type="text" id="createName" placeholder="Nhập tên" maxlength="12"
                             autocomplete="off">
                     </div>
-                    <button id="createRoom" class="btn btn-primary">Create Room</button>
-                    <button class="btn-link" id="backFromCreate">← Back to menu</button>
+                    <button id="createRoom" class="btn btn-primary">Tạo Phòng</button>
+                    <button class="btn-link" id="backFromCreate">← Quay lại</button>
                 </div>
             </div>
 
             <!-- Join Game Form -->
             <div id="joinForm" class="lobby-section hidden">
                 <div class="form-card">
-                    <h3>Join Existing Game</h3>
+                    <h3>Vào Phòng Có Sẵn</h3>
                     <div class="input-group">
-                        <label for="joinName">Your Name</label>
-                        <input type="text" id="joinName" placeholder="Enter your name" maxlength="12"
+                        <label for="joinName">Tên của bạn</label>
+                        <input type="text" id="joinName" placeholder="Nhập tên" maxlength="12"
                             autocomplete="off">
                     </div>
                     <div class="input-group">
-                        <label for="roomCode">Room Code (4 letters)</label>
+                        <label for="roomCode">Mã phòng (4 ký tự)</label>
                         <input type="text" id="roomCode" placeholder="ABCD" maxlength="4" autocomplete="off"
                             class="code-input">
                     </div>
-                    <button id="joinRoom" class="btn btn-secondary">Join Room</button>
-                    <button class="btn-link" id="backFromJoin">← Back to menu</button>
+                    <button id="joinRoom" class="btn btn-secondary">Vào Phòng</button>
+                    <button class="btn-link" id="backFromJoin">← Quay lại</button>
                 </div>
             </div>
 
             <!-- Room Info (after create/join) -->
             <div id="roomInfo" class="room-info hidden">
                 <div class="code-display">
-                    <p class="code-label">Room Code</p>
+                    <p class="code-label">Mã Phòng</p>
                     <div id="displayRoomCode" class="room-code-box"></div>
-                    <button id="copyCodeBtn" class="btn-copy">Tap to Copy</button>
+                    <button id="copyCodeBtn" class="btn-copy">Nhấn để sao chép</button>
                 </div>
                 <div class="players-section">
-                    <p>Players: <span id="playerCount">0</span>/8</p>
+                    <p>Người chơi: <span id="playerCount">0</span>/8</p>
                     <div id="playerList" class="player-list"></div>
                 </div>
                 <div id="hardModeToggle" class="hard-mode-toggle hidden">
                     <label class="toggle-label">
                         <input type="checkbox" id="hardModeCheckbox">
-                        <span class="toggle-text">Hard Mode (3 slots)</span>
+                        <span class="toggle-text">Chế độ khó (3 ô)</span>
                     </label>
                 </div>
-                <button id="startGame" class="btn btn-primary hidden">Start Game</button>
-                <p class="waiting-text">Waiting for host to start...</p>
+                <button id="startGame" class="btn btn-primary hidden">Bắt Đầu</button>
+                <p class="waiting-text">Đang chờ chủ phòng...</p>
             </div>
         </div>
     </div>
@@ -96,11 +100,11 @@
 
             <!-- Penalty zone -->
             <div id="penaltyZone" class="penalty-zone">
-                <span class="penalty-text">Discard</span>
+                <span class="penalty-text">Bỏ bài</span>
             </div>
 
             <!-- Fullscreen button -->
-            <button id="fullscreenBtn" class="fullscreen-btn" title="Toggle Fullscreen">
+            <button id="fullscreenBtn" class="fullscreen-btn" title="Toàn màn hình">
                 <span class="fullscreen-icon">[ ]</span>
             </button>
         </div>
@@ -108,9 +112,9 @@
         <!-- Game Over Modal -->
         <div id="gameOverModal" class="modal hidden">
             <div class="modal-content">
-                <h2>Game Over!</h2>
+                <h2>Kết Thúc!</h2>
                 <p id="gameOverMessage"></p>
-                <button id="playAgain" class="btn btn-primary">Play Again</button>
+                <button id="playAgain" class="btn btn-primary">Chơi Lại</button>
             </div>
         </div>
     </div>

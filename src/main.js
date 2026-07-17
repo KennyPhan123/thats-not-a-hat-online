@@ -323,6 +323,14 @@ function handleServerMessage(data) {
             }
             break;
 
+        case 'dragSync':
+            handleDragSync(data);
+            break;
+
+        case 'dragEnd':
+            handleRemoteDragEnd(data);
+            break;
+
         case 'error':
             alert(data.message);
             break;
@@ -339,10 +347,36 @@ function startGame() {
     renderGame();
 }
 
+let lastDragEmit = 0;
+
 function setupDragHandler() {
     state.dragHandler = new DragHandler({
         container: elements.gameTable,
-        onDrop: handleDrop
+        onDrop: handleDrop,
+        onDragStart: (dragData) => {},
+        onDragMove: (x, y, dragData) => {
+            if (!state.socket || !dragData) return;
+            const now = Date.now();
+            if (now - lastDragEmit < 30) return; // ~30fps max
+            lastDragEmit = now;
+
+            const player = state.gameState.players.find(p => p.id === dragData.fromPlayerId);
+            const card = player?.cards[dragData.fromSlot];
+            if (!card) return;
+
+            state.socket.send(JSON.stringify({
+                type: 'dragMove',
+                x: x / window.innerWidth,
+                y: y / window.innerHeight,
+                cardId: dragData.cardId,
+                cardFront: card.front
+            }));
+        },
+        onDragEnd: () => {
+            if (state.socket) {
+                state.socket.send(JSON.stringify({ type: 'dragEnd' }));
+            }
+        }
     });
 }
 
@@ -605,8 +639,23 @@ function handleCardFlipped(data) {
     const player = state.gameState.players.find(p => p.id === data.playerId);
     if (player && player.cards[data.slotIndex]) {
         player.cards[data.slotIndex].isFlipped = data.isFlipped;
+        
+        // Update DOM directly to allow CSS transition to play
+        const playerSlot = document.querySelector(`.player-slot[data-player-id="${data.playerId}"]`);
+        if (playerSlot) {
+            const cardSlot = playerSlot.querySelector(`.card-slot[data-slot-index="${data.slotIndex}"]`);
+            if (cardSlot) {
+                const card = cardSlot.querySelector('.card');
+                if (card) {
+                    if (data.isFlipped) {
+                        card.classList.add('flipped');
+                    } else {
+                        card.classList.remove('flipped');
+                    }
+                }
+            }
+        }
     }
-    renderGame();
 }
 
 function handleCardsSwapped(data) {
@@ -618,20 +667,47 @@ function handleCardsSwapped(data) {
 }
 
 function handleCardDiscarded(data) {
-    // Sync full player state from server (includes normalized cards)
-    if (data.players) {
-        state.gameState.players = data.players;
-    }
-
-    // Update discard history
-    if (data.discardHistory) {
-        state.discardHistory = data.discardHistory;
-    }
+    state.gameState.players = data.players;
+    state.discardHistory = data.discardHistory;
 
     renderGame();
 
     if (data.gameOver) {
         showGameOver(data.loserName);
+    }
+}
+
+// Drag Sync Handlers
+const ghostCards = new Map();
+
+function handleDragSync(data) {
+    let ghost = ghostCards.get(data.playerId);
+    if (!ghost) {
+        ghost = document.createElement('div');
+        ghost.className = 'ghost-drag-card';
+        ghost.style.backgroundImage = `url(${data.cardFront})`;
+        
+        const label = document.createElement('div');
+        label.className = 'ghost-drag-label';
+        label.textContent = `${data.playerName} đang di chuyển...`;
+        ghost.appendChild(label);
+        
+        document.body.appendChild(ghost);
+        ghostCards.set(data.playerId, ghost);
+    }
+    
+    // Update position based on normalized coordinates
+    const px = data.x * window.innerWidth;
+    const py = data.y * window.innerHeight;
+    ghost.style.left = `${px}px`;
+    ghost.style.top = `${py}px`;
+}
+
+function handleRemoteDragEnd(data) {
+    const ghost = ghostCards.get(data.playerId);
+    if (ghost) {
+        ghost.remove();
+        ghostCards.delete(data.playerId);
     }
 }
 
