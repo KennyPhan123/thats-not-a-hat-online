@@ -673,14 +673,71 @@ function handleDrop(dragData, dropTarget) {
 
 // === EVENT HANDLERS ===
 function handleCardDrawn(data) {
-    // Pop the top card from client deck (same as server did)
+    playSound('deal', 0.5);
+
+    // Get starting position from the deck
+    const deckEl = elements.deck;
+    let startRect;
+    const topDeckCard = deckEl.querySelector('.deck-card:last-child');
+    if (topDeckCard) {
+        startRect = topDeckCard.getBoundingClientRect();
+    } else {
+        startRect = deckEl.getBoundingClientRect();
+    }
+
+    // Create a clone of the drawn card for animation
+    const clone = createCard(data.card, false);
+    clone.style.position = 'fixed';
+    clone.style.left = `${startRect.left}px`;
+    clone.style.top = `${startRect.top}px`;
+    clone.style.margin = '0';
+    clone.style.zIndex = '9999';
+    clone.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    // It starts face down (not flipped), but wait, createCard doesn't add 'flipped' by default?
+    // Wait, createCard sets 'flipped' class based on card.isFlipped? No, let's just make sure it's not flipped.
+    clone.classList.remove('flipped'); // actually in our css .card has no back visible unless flipped? 
+    // wait, That's Not a Hat has cards face down in the deck. We should show the back.
+    // Let me check createCard behavior.
+    document.body.appendChild(clone);
+
+    // Pop the top card from client deck
     state.gameState.deck.pop();
 
-    // Sync player state from server (includes shift logic)
+    // Sync player state from server
     if (data.players) {
         state.gameState.players = data.players;
     }
     renderGame();
+    
+    // Find the target slot
+    const targetSlot = document.querySelector(`.player-slot[data-player-id="${data.playerId}"] .card-slot[data-slot-index="${data.slotIndex}"]`);
+    const targetCard = targetSlot?.querySelector('.card');
+    
+    if (targetCard && clone) {
+        // Hide the newly rendered card temporarily
+        targetCard.style.opacity = '0';
+        
+        // Wait for DOM layout
+        requestAnimationFrame(() => {
+            const targetRect = targetSlot.getBoundingClientRect();
+            
+            requestAnimationFrame(() => {
+                // Animate to target
+                clone.style.left = `${targetRect.left + (targetRect.width - clone.offsetWidth) / 2}px`;
+                clone.style.top = `${targetRect.top + (targetRect.height - clone.offsetHeight) / 2}px`;
+                
+                // After animation completes
+                setTimeout(() => {
+                    if (document.body.contains(clone)) {
+                        document.body.removeChild(clone);
+                    }
+                    targetCard.style.opacity = '1';
+                }, 400);
+            });
+        });
+    } else if (clone) {
+        document.body.removeChild(clone);
+    }
 }
 
 function handleCardFlipped(data) {
