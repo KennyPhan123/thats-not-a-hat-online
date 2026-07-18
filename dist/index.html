@@ -12,8 +12,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-d8vKhvy6.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-D8_QNO0Y.css">
+  <script type="module" crossorigin src="./assets/index-DrymOgJS.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BXrtDe8Q.css">
 </head>
 
 <body>
@@ -21,6 +21,16 @@
     <button id="themeToggleBtn" class="theme-toggle-btn" title="Giao diện Tối/Sáng">
         <span class="theme-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+        </span>
+    </button>
+    
+    <!-- Mic Toggle -->
+    <button id="micToggleBtn" class="mic-toggle-btn hidden" title="Bật/Tắt Micro">
+        <span class="mic-icon">
+            <!-- Mic Off Icon (Default) -->
+            <svg id="micOffIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            <!-- Mic On Icon (Hidden initially) -->
+            <svg id="micOnIcon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
         </span>
     </button>
 

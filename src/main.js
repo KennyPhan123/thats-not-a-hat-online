@@ -4,10 +4,14 @@ import { renderPlayers } from './player.js';
 import { createCard, setupFlipHandler } from './card.js';
 import { DragHandler } from './drag.js';
 import { initAudio, playSound } from './audio.js';
+import { VoiceChat } from './webrtc.js';
 import PartySocket from 'partysocket';
 
 // Use deployed PartyKit server
 const PARTYKIT_HOST = 'tnah.kennyphan123.partykit.dev';
+
+// WebRTC instance
+const voiceChat = new VoiceChat();
 
 // App State
 const state = {
@@ -57,7 +61,10 @@ const elements = {
     themeToggleBtn: document.getElementById('themeToggleBtn'),
     themeIcon: document.querySelector('.theme-icon'),
     timerSetting: document.getElementById('timerSetting'),
-    timerDurationSelect: document.getElementById('timerDurationSelect')
+    timerDurationSelect: document.getElementById('timerDurationSelect'),
+    micToggleBtn: document.getElementById('micToggleBtn'),
+    micOffIcon: document.getElementById('micOffIcon'),
+    micOnIcon: document.getElementById('micOnIcon')
 };
 
 function setupTheme() {
@@ -89,10 +96,26 @@ function init() {
     setupTheme();
     setupLobbyHandlers();
     setupGameHandlers();
+    setupMicToggle();
 
     window.addEventListener('resize', () => {
         if (state.gameState.gameStarted) {
             renderGame();
+        }
+    });
+}
+
+function setupMicToggle() {
+    elements.micToggleBtn.addEventListener('click', async () => {
+        const isEnabled = await voiceChat.toggleMic();
+        if (isEnabled) {
+            elements.micToggleBtn.classList.add('active');
+            elements.micOffIcon.classList.add('hidden');
+            elements.micOnIcon.classList.remove('hidden');
+        } else {
+            elements.micToggleBtn.classList.remove('active');
+            elements.micOffIcon.classList.remove('hidden');
+            elements.micOnIcon.classList.add('hidden');
         }
     });
 }
@@ -217,6 +240,11 @@ function connectToRoom() {
 
     state.socket.addEventListener('open', () => {
         state.playerId = state.socket.id;
+        
+        // Initialize WebRTC Voice Chat
+        voiceChat.init(state.socket, state.playerId);
+        elements.micToggleBtn.classList.remove('hidden');
+
         state.socket.send(JSON.stringify({
             type: 'join',
             name: state.playerName
@@ -311,6 +339,9 @@ function handleServerMessage(data) {
             if (data.state.gameStarted) {
                 startGame();
             }
+            
+            // Connect to peers for Voice Chat
+            voiceChat.join(state.gameState.players);
             break;
 
         case 'playerJoined':
@@ -320,9 +351,20 @@ function handleServerMessage(data) {
                 state.isHost = true;
             }
             updatePlayerList();
+            
+            // Connect to the new player
+            voiceChat.join(state.gameState.players);
             break;
 
         case 'playerLeft':
+            // Find who left to clean up their WebRTC connection
+            const oldPlayers = state.gameState.players;
+            const newPlayers = data.players;
+            const leftPlayer = oldPlayers.find(op => !newPlayers.some(np => np.id === op.id));
+            if (leftPlayer) {
+                voiceChat.removePeer(leftPlayer.id);
+            }
+            
             state.gameState.players = data.players;
             if (data.hostId === state.playerId) {
                 state.isHost = true;
@@ -331,6 +373,10 @@ function handleServerMessage(data) {
             if (state.gameState.gameStarted) {
                 renderGame();
             }
+            break;
+            
+        case 'webrtc-signal':
+            voiceChat.handleSignal(data.fromId, data.signal);
             break;
 
         case 'gameStarted':

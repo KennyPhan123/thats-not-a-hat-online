@@ -76,6 +76,9 @@ export default class GameServer {
                 case 'changeTimer':
                     this.handleChangeTimer(data, sender);
                     break;
+                case 'webrtc-signal':
+                    this.handleWebRTCSignal(data, sender);
+                    break;
             }
         } catch (e) {
             console.error('Message parse error:', e);
@@ -466,5 +469,16 @@ export default class GameServer {
 
     broadcast(message) {
         this.room.broadcast(JSON.stringify(message));
+    }
+    handleWebRTCSignal(data, sender) {
+        // Forward WebRTC signaling messages directly to the target peer
+        const targetConnection = Array.from(this.room.getConnections()).find(c => c.id === data.targetId);
+        if (targetConnection) {
+            targetConnection.send(JSON.stringify({
+                type: 'webrtc-signal',
+                fromId: sender.id,
+                signal: data.signal
+            }));
+        }
     }
 }
