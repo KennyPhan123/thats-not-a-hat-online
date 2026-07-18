@@ -720,23 +720,28 @@ function handleCardDrawn(data) {
         // Hide the newly rendered card temporarily
         targetCard.style.opacity = '0';
         
-        // Wait for DOM layout
+        // Compute rect IMMEDIATELY before any rapid subsequent clicks can trigger renderGame and destroy the slot!
+        const targetRect = targetSlot.getBoundingClientRect();
+        
+        // Wait for next frame to start animation
         requestAnimationFrame(() => {
-            const targetRect = targetSlot.getBoundingClientRect();
+            // Animate to target
+            clone.style.left = `${targetRect.left + (targetRect.width - clone.offsetWidth) / 2}px`;
+            clone.style.top = `${targetRect.top + (targetRect.height - clone.offsetHeight) / 2}px`;
             
-            requestAnimationFrame(() => {
-                // Animate to target
-                clone.style.left = `${targetRect.left + (targetRect.width - clone.offsetWidth) / 2}px`;
-                clone.style.top = `${targetRect.top + (targetRect.height - clone.offsetHeight) / 2}px`;
+            // After animation completes
+            setTimeout(() => {
+                if (document.body.contains(clone)) {
+                    document.body.removeChild(clone);
+                }
                 
-                // After animation completes
-                setTimeout(() => {
-                    if (document.body.contains(clone)) {
-                        document.body.removeChild(clone);
-                    }
-                    targetCard.style.opacity = '1';
-                }, 400);
-            });
+                // Re-query the target card because renderGame might have been called again by rapid clicks
+                const freshTargetSlot = document.querySelector(`.player-slot[data-player-id="${data.playerId}"] .card-slot[data-slot-index="${data.slotIndex}"]`);
+                const freshTargetCard = freshTargetSlot?.querySelector('.card');
+                if (freshTargetCard) {
+                    freshTargetCard.style.opacity = '1';
+                }
+            }, 400);
         });
     } else if (clone) {
         document.body.removeChild(clone);
