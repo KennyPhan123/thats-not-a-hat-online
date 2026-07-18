@@ -47,6 +47,41 @@ function createPlayerSlot(player, position, currentPlayerId, callbacks) {
 
     slot.appendChild(info);
 
+    // Timer UI
+    if (callbacks.timers && callbacks.timers[player.id]) {
+        const timerData = callbacks.timers[player.id];
+        const timerDiv = document.createElement('div');
+        timerDiv.className = 'player-timer';
+        
+        const progressBar = document.createElement('div');
+        progressBar.className = 'timer-progress';
+        
+        timerDiv.appendChild(progressBar);
+        
+        const durationMs = timerData.duration * 1000;
+        
+        const updateTimer = () => {
+            if (!document.body.contains(timerDiv)) return;
+            const now = Date.now();
+            const left = Math.max(0, timerData.endTime - now);
+            const p = (left / durationMs) * 100;
+            progressBar.style.width = `${p}%`;
+            
+            if (p < 30) {
+                progressBar.style.backgroundColor = 'var(--accent)';
+            } else {
+                progressBar.style.backgroundColor = '#4caf50';
+            }
+            
+            if (left > 0) {
+                requestAnimationFrame(updateTimer);
+            }
+        };
+        requestAnimationFrame(updateTimer);
+        
+        slot.appendChild(timerDiv);
+    }
+
     // Card slots - use dynamic slot count
     const cardsContainer = document.createElement('div');
     cardsContainer.className = 'player-cards';

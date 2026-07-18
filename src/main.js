@@ -20,7 +20,9 @@ const state = {
     dragHandler: null,
     discardHistory: [], // Track discarded cards
     hardMode: false,
-    slotCount: 2
+    slotCount: 2,
+    timerDuration: 0,
+    timers: {}
 };
 
 // DOM Elements
@@ -53,7 +55,9 @@ const elements = {
     hardModeToggle: document.getElementById('hardModeToggle'),
     hardModeCheckbox: document.getElementById('hardModeCheckbox'),
     themeToggleBtn: document.getElementById('themeToggleBtn'),
-    themeIcon: document.querySelector('.theme-icon')
+    themeIcon: document.querySelector('.theme-icon'),
+    timerSetting: document.getElementById('timerSetting'),
+    timerDurationSelect: document.getElementById('timerDurationSelect')
 };
 
 function setupTheme() {
@@ -167,6 +171,16 @@ function setupLobbyHandlers() {
             }));
         }
     });
+
+    // Timer setting (host only)
+    elements.timerDurationSelect?.addEventListener('change', (e) => {
+        if (state.socket && state.isHost) {
+            state.socket.send(JSON.stringify({
+                type: 'changeTimer',
+                duration: e.target.value
+            }));
+        }
+    });
 }
 
 // Copy room code to clipboard
@@ -259,12 +273,16 @@ function updatePlayerList() {
     if (state.isHost && players.length >= 2) {
         elements.startGame.classList.remove('hidden');
         elements.hardModeToggle.classList.remove('hidden');
+        elements.timerSetting.classList.remove('hidden');
         elements.waitingText.classList.add('hidden');
     } else if (state.isHost) {
         elements.hardModeToggle.classList.remove('hidden');
+        elements.timerSetting.classList.remove('hidden');
     } else if (!state.isHost) {
         elements.waitingText.classList.remove('hidden');
         elements.hardModeToggle.classList.add('hidden');
+        elements.timerSetting.classList.remove('hidden');
+        if (elements.timerDurationSelect) elements.timerDurationSelect.disabled = true;
     }
 }
 
@@ -338,6 +356,7 @@ function handleServerMessage(data) {
             state.discardHistory = data.discardHistory || [];
             state.hardMode = data.hardMode || false;
             state.slotCount = data.slotCount || 2;
+            state.timers = {};
             elements.gameOverModal.classList.add('hidden');
             renderGame();
             break;
@@ -350,6 +369,26 @@ function handleServerMessage(data) {
             if (elements.hardModeCheckbox) {
                 elements.hardModeCheckbox.checked = data.hardMode;
             }
+            break;
+            
+        case 'timerChanged':
+            state.timerDuration = data.timerDuration;
+            if (elements.timerDurationSelect) {
+                elements.timerDurationSelect.value = data.timerDuration;
+            }
+            break;
+            
+        case 'timerStarted':
+            state.timers[data.playerId] = {
+                duration: data.duration,
+                endTime: data.endTime
+            };
+            if (state.gameState.gameStarted) renderGame();
+            break;
+            
+        case 'timerCancelled':
+            delete state.timers[data.playerId];
+            if (state.gameState.gameStarted) renderGame();
             break;
 
         case 'error':
@@ -379,7 +418,8 @@ function renderGame() {
     renderDeck();
     renderPlayers(state.gameState, elements.playersContainer, {
         onFlip: handleFlipCard,
-        slotCount: state.slotCount
+        slotCount: state.slotCount,
+        timers: state.timers
     });
 }
 

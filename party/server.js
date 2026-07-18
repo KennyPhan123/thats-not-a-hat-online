@@ -21,8 +21,10 @@ export default class GameServer {
             gameStarted: false,
             hostId: null,
             hardMode: false, // Hard mode: 3 slots instead of 2
-            slotCount: 2 // Default 2 slots
+            slotCount: 2, // Default 2 slots
+            timerDuration: 0 // 0 = off
         };
+        this.timers = {};
     }
 
     onConnect(connection, ctx) {
@@ -70,6 +72,9 @@ export default class GameServer {
                     break;
                 case 'toggleHardMode':
                     this.handleToggleHardMode(data, sender);
+                    break;
+                case 'changeTimer':
+                    this.handleChangeTimer(data, sender);
                     break;
             }
         } catch (e) {
@@ -120,6 +125,10 @@ export default class GameServer {
     handleLeave(sender) {
         const index = this.gameState.players.findIndex(p => p.id === sender.id);
         if (index !== -1) {
+            if (this.timers[sender.id]) {
+                clearTimeout(this.timers[sender.id].timeout);
+                delete this.timers[sender.id];
+            }
             this.gameState.players.splice(index, 1);
 
             if (this.gameState.hostId === sender.id && this.gameState.players.length > 0) {
@@ -164,7 +173,8 @@ export default class GameServer {
                 id: `card_${cardNum}`,
                 front: `/cards/items/card_${cardNum}.png`,
                 back: i <= 55 ? `/cards/backs/back_black.png` : `/cards/backs/back_white.png`,
-                isFlipped: false
+                isFlipped: false,
+                source: 'deck'
             });
         }
         return cards;
@@ -199,6 +209,8 @@ export default class GameServer {
             topCard: this.gameState.deck.length > 0 ? this.gameState.deck[this.gameState.deck.length - 1] : null,
             players: this.gameState.players // Send full player state for sync
         });
+        
+        this.checkTimer(player);
     }
 
     // Only card owner can flip their own cards
@@ -227,6 +239,7 @@ export default class GameServer {
 
         // Move the card
         const card = fromPlayer.cards[data.fromSlot];
+        card.source = 'player';
         fromPlayer.cards[data.fromSlot] = null;
         toPlayer.cards[data.toSlot] = card;
 
@@ -253,6 +266,7 @@ export default class GameServer {
         for (let i = 0; i < player.cards.length; i++) {
             player.cards[i] = cards[i] || null;
         }
+        this.checkTimer(player);
     }
 
     // Toggle hard mode (host only, before game starts)
@@ -278,6 +292,92 @@ export default class GameServer {
             hardMode: this.gameState.hardMode,
             slotCount: this.gameState.slotCount,
             players: this.gameState.players
+        });
+    }
+
+    handleChangeTimer(data, sender) {
+        if (sender.id !== this.gameState.hostId) return;
+        if (this.gameState.gameStarted) return;
+        this.gameState.timerDuration = parseInt(data.duration, 10) || 0;
+        this.broadcast({
+            type: 'timerChanged',
+            timerDuration: this.gameState.timerDuration
+        });
+    }
+
+    checkTimer(player) {
+        if (!this.gameState.gameStarted || this.gameState.timerDuration === 0) return;
+        
+        // Count non-null cards
+        const cardCount = player.cards.filter(c => c !== null).length;
+        const isFull = cardCount >= this.gameState.slotCount;
+        
+        if (isFull && !this.timers[player.id]) {
+            const durationMs = this.gameState.timerDuration * 1000;
+            const endTime = Date.now() + durationMs;
+            this.timers[player.id] = {
+                endTime,
+                timeout: setTimeout(() => this.handleTimeout(player.id), durationMs)
+            };
+            this.broadcast({
+                type: 'timerStarted',
+                playerId: player.id,
+                duration: this.gameState.timerDuration,
+                endTime
+            });
+        } else if (!isFull && this.timers[player.id]) {
+            clearTimeout(this.timers[player.id].timeout);
+            delete this.timers[player.id];
+            this.broadcast({
+                type: 'timerCancelled',
+                playerId: player.id
+            });
+        }
+    }
+
+    handleTimeout(playerId) {
+        const player = this.gameState.players.find(p => p.id === playerId);
+        if (!player || !this.timers[playerId]) return;
+        
+        const topSlotIndex = player.cards.length - 1;
+        const topCard = player.cards[topSlotIndex];
+        
+        if (!topCard) return; 
+        
+        // if deck -> discard top, if player -> discard bottom (slot 0)
+        let discardSlot = topSlotIndex;
+        if (topCard.source === 'player') {
+            discardSlot = 0;
+        }
+        
+        const cardToDiscard = player.cards[discardSlot];
+        
+        // Add to discard history
+        this.gameState.discardHistory.push({
+            card: cardToDiscard,
+            playerId: player.id,
+            playerName: player.name,
+            timestamp: Date.now()
+        });
+
+        player.cards[discardSlot] = null;
+        player.penalties++;
+        
+        this.normalizePlayerCards(player);
+        const gameOver = player.penalties >= 3;
+        
+        delete this.timers[playerId];
+        
+        this.broadcast({
+            type: 'cardDiscarded',
+            playerId,
+            slotIndex: discardSlot,
+            penalties: player.penalties,
+            discardHistory: this.gameState.discardHistory,
+            players: this.gameState.players,
+            gameOver,
+            loserName: gameOver ? player.name : null,
+            isTimeout: true
         });
     }
 
@@ -344,6 +444,12 @@ export default class GameServer {
 
         // Clear discard history
         this.gameState.discardHistory = [];
+        
+        // Clear all timers
+        for (const playerId in this.timers) {
+            clearTimeout(this.timers[playerId].timeout);
+        }
+        this.timers = {};
 
         const cards = this.generateCards();
         this.gameState.deck = shuffleArray(cards);
