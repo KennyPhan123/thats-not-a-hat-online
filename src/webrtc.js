@@ -25,17 +25,15 @@ export class VoiceChat {
                 this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 this.isMicEnabled = true;
                 
-                // Add tracks to existing peers without renegotiation
+                // Add tracks to existing peers, onnegotiationneeded will handle the rest
                 for (const peer of this.peers.values()) {
-                    const audioTrack = this.localStream.getAudioTracks()[0];
-                    if (audioTrack) {
-                        const transceiver = peer.getTransceivers().find(t => t.receiver.track.kind === 'audio' || (t.sender && t.sender.track && t.sender.track.kind === 'audio') || true);
-                        // In WebRTC, if we added a transceiver earlier, we can just replace the track
-                        const audioTransceivers = peer.getTransceivers();
-                        if (audioTransceivers.length > 0 && audioTransceivers[0].sender) {
-                            audioTransceivers[0].sender.replaceTrack(audioTrack);
+                    this.localStream.getTracks().forEach(track => {
+                        const senders = peer.getSenders();
+                        const alreadyAdded = senders.find(s => s.track === track);
+                        if (!alreadyAdded) {
+                            peer.addTrack(track, this.localStream);
                         }
-                    }
+                    });
                 }
             } catch (err) {
                 console.error('Failed to get microphone:', err);
@@ -73,21 +71,35 @@ export class VoiceChat {
         let peer = this.peers.get(fromId);
         
         if (!peer) {
-            // We received an offer from a new player
             peer = this.createPeer(fromId, false);
         }
 
         try {
             if (signal.sdp) {
-                await peer.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+                // Glare handling: if we receive an offer while we have a local offer, 
+                // the polite peer (lower ID) rolls back and accepts the incoming offer.
+                const isPolite = this.playerId < fromId;
+                const offerCollision = signal.sdp.type === 'offer' && 
+                                       (peer.signalingState !== 'stable' || peer.pendingLocalDescription);
+
+                if (offerCollision) {
+                    if (!isPolite) {
+                        return; // Ignore the incoming offer
+                    }
+                    // Polite peer rolls back
+                    await Promise.all([
+                        peer.setLocalDescription({ type: 'rollback' }),
+                        peer.setRemoteDescription(new RTCSessionDescription(signal.sdp))
+                    ]);
+                } else {
+                    await peer.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+                }
+
+                // IMPORTANT: ontrack does NOT fire if the transceiver was created locally (e.g. by addTrack).
+                // So we MUST manually attach receivers after setting the remote description!
+                this.attachTracks(peer, fromId);
+
                 if (signal.sdp.type === 'offer') {
-                    // Force audio transceivers to sendrecv so we can replaceTrack later without renegotiation
-                    peer.getTransceivers().forEach(t => {
-                        if (t.receiver.track.kind === 'audio') {
-                            t.direction = 'sendrecv';
-                        }
-                    });
-                    
                     const answer = await peer.createAnswer();
                     await peer.setLocalDescription(answer);
                     this.sendSignal(fromId, { sdp: peer.localDescription });
@@ -129,7 +141,6 @@ export class VoiceChat {
             if (event.streams && event.streams.length > 0) {
                 audioElement.srcObject = event.streams[0];
             } else {
-                // When using addTransceiver without streams, we must construct the MediaStream manually
                 audioElement.srcObject = new MediaStream([event.track]);
             }
         };
@@ -141,23 +152,27 @@ export class VoiceChat {
             }
         };
 
+        // Standard dynamic renegotiation
+        peer.onnegotiationneeded = async () => {
+            try {
+                const offer = await peer.createOffer();
+                await peer.setLocalDescription(offer);
+                this.sendSignal(targetId, { sdp: peer.localDescription });
+            } catch (err) {
+                console.error('Negotiation error:', err);
+            }
+        };
+
         // Add local tracks if we already have mic permission
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => {
                 peer.addTrack(track, this.localStream);
             });
-        } else {
-            // Pre-create an audio transceiver so we can replaceTrack later without renegotiation!
-            peer.addTransceiver('audio', { direction: 'sendrecv' });
         }
 
         if (isInitiator) {
-            peer.createOffer()
-                .then(offer => peer.setLocalDescription(offer))
-                .then(() => {
-                    this.sendSignal(targetId, { sdp: peer.localDescription });
-                })
-                .catch(err => console.error('Failed to create offer:', err));
+            // Create a data channel so ICE gathering and connection starts even without audio tracks
+            peer.createDataChannel('init');
         }
 
         return peer;
@@ -183,6 +198,25 @@ export class VoiceChat {
                 signal: signal
             }));
         }
+    }
+
+    attachTracks(peer, targetId) {
+        peer.getReceivers().forEach(receiver => {
+            if (receiver.track && receiver.track.kind === 'audio') {
+                let audioElement = document.getElementById(`audio-${targetId}`);
+                if (!audioElement) {
+                    audioElement = document.createElement('audio');
+                    audioElement.id = `audio-${targetId}`;
+                    audioElement.autoplay = true;
+                    this.audioContainer.appendChild(audioElement);
+                }
+                
+                // If it's not already playing this exact track
+                if (!audioElement.srcObject || !audioElement.srcObject.getTracks().includes(receiver.track)) {
+                    audioElement.srcObject = new MediaStream([receiver.track]);
+                }
+            }
+        });
     }
 
     disconnect() {
