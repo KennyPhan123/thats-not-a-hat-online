@@ -50,10 +50,35 @@ const elements = {
     gameOverMessage: document.getElementById('gameOverMessage'),
     playAgain: document.getElementById('playAgain'),
     hardModeToggle: document.getElementById('hardModeToggle'),
-    hardModeCheckbox: document.getElementById('hardModeCheckbox')
+    hardModeCheckbox: document.getElementById('hardModeCheckbox'),
+    themeToggleBtn: document.getElementById('themeToggleBtn'),
+    themeIcon: document.querySelector('.theme-icon')
 };
 
+function setupTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+
+    elements.themeToggleBtn.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+    });
+}
+
+function setTheme(theme) {
+    if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        elements.themeIcon.textContent = '☀️';
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        elements.themeIcon.textContent = '🌙';
+    }
+    localStorage.setItem('theme', theme);
+}
+
 function init() {
+    setupTheme();
     setupLobbyHandlers();
     setupGameHandlers();
 

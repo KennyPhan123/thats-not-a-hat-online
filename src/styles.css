@@ -34,6 +34,30 @@
   --card-height-lg: 75px;
 }
 
+[data-theme="dark"] {
+  /* Dark Pastel Pink Palette */
+  --bg-primary: #1a0f14;
+  --bg-secondary: #2d1420;
+  --surface: #3a1a2b;
+  --surface-alt: #462235;
+  --border: #622e48;
+  --border-light: #7c3a5b;
+
+  --accent: #d898b0;
+  --accent-hover: #e8b8ca;
+  --accent-soft: #894565;
+  --accent-softer: #5c2b42;
+  --accent-muted: #492235;
+  --accent-muted-hover: #5c2b42;
+
+  --text-primary: #f8e8ef;
+  --text-secondary: #e8b8ca;
+  --text-body: #f0ccd8;
+  --card-shadow: rgba(0, 0, 0, 0.5);
+  --table-bg: #2d1420;
+  --penalty-zone: #73304c;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -1018,4 +1042,37 @@ body {
   background: var(--accent-softer);
   border-color: var(--accent-soft);
   transform: scale(1.05);
+}
+
+/* ============================================
+   Theme Toggle Button
+   ============================================ */
+.theme-toggle-btn {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px var(--card-shadow);
+}
+
+.theme-toggle-btn:hover {
+  transform: scale(1.1);
+  background: var(--accent-softer);
+  border-color: var(--accent);
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.95);
 }
