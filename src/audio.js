@@ -3,8 +3,8 @@ const buffers = {};
 const activeSources = {};
 
 const soundFiles = {
-    deal: ['/sounds/card deal 1.wav', '/sounds/card deal 2.wav'],
-    flip: ['/sounds/card flip 1.wav', '/sounds/card flip 2.wav']
+    deal: ['/sounds/card flip 2.wav'],
+    flip: ['/sounds/card flip 2.wav']
 };
 
 export async function initAudio() {
