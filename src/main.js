@@ -700,20 +700,27 @@ function handleCardDiscarded(data) {
                 clone.style.top = `${targetY}px`;
                 clone.classList.add('void-suck');
                 
-                // Add screen shake and vignette
-                elements.gameTable.classList.add('shake-effect');
-                const vignette = document.getElementById('vignetteOverlay');
-                if (vignette) vignette.classList.add('vignette-effect');
+                const isMe = data.playerId === state.playerId;
                 
-                // Haptic feedback
-                if (navigator.vibrate) {
-                    navigator.vibrate([150, 50, 150]);
+                if (isMe) {
+                    // Add screen shake and vignette
+                    elements.gameTable.classList.add('shake-effect');
+                    const vignette = document.getElementById('vignetteOverlay');
+                    if (vignette) vignette.classList.add('vignette-effect');
+                    
+                    // Haptic feedback
+                    if (navigator.vibrate) {
+                        navigator.vibrate([150, 50, 150]);
+                    }
                 }
                 
                 setTimeout(() => {
                     clone.remove();
-                    elements.gameTable.classList.remove('shake-effect');
-                    if (vignette) vignette.classList.remove('vignette-effect');
+                    if (isMe) {
+                        elements.gameTable.classList.remove('shake-effect');
+                        const vignette = document.getElementById('vignetteOverlay');
+                        if (vignette) vignette.classList.remove('vignette-effect');
+                    }
                     
                     if (data.gameOver) {
                         showGameOver(data.loserName);
