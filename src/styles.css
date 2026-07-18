@@ -1067,6 +1067,14 @@ body {
   box-shadow: 0 4px 10px var(--card-shadow);
 }
 
+.theme-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
 .theme-toggle-btn:hover {
   transform: scale(1.1);
   background: var(--accent-softer);
