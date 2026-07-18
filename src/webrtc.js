@@ -79,6 +79,13 @@ export class VoiceChat {
             if (signal.sdp) {
                 await peer.setRemoteDescription(new RTCSessionDescription(signal.sdp));
                 if (signal.sdp.type === 'offer') {
+                    // Force audio transceivers to sendrecv so we can replaceTrack later without renegotiation
+                    peer.getTransceivers().forEach(t => {
+                        if (t.receiver.track.kind === 'audio') {
+                            t.direction = 'sendrecv';
+                        }
+                    });
+                    
                     const answer = await peer.createAnswer();
                     await peer.setLocalDescription(answer);
                     this.sendSignal(fromId, { sdp: peer.localDescription });
@@ -117,7 +124,12 @@ export class VoiceChat {
                 audioElement.autoplay = true;
                 this.audioContainer.appendChild(audioElement);
             }
-            audioElement.srcObject = event.streams[0];
+            if (event.streams && event.streams.length > 0) {
+                audioElement.srcObject = event.streams[0];
+            } else {
+                // When using addTransceiver without streams, we must construct the MediaStream manually
+                audioElement.srcObject = new MediaStream([event.track]);
+            }
         };
 
         // Clean up on disconnect
