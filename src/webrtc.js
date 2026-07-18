@@ -55,7 +55,9 @@ export class VoiceChat {
     join(players) {
         players.forEach(player => {
             if (player.id !== this.playerId && !this.peers.has(player.id)) {
-                this.createPeer(player.id, true);
+                // Deterministically decide who is the initiator based on string comparison of IDs
+                const isInitiator = this.playerId > player.id;
+                this.createPeer(player.id, isInitiator);
             }
         });
     }
