@@ -692,13 +692,16 @@ function handleCardDrawn(data) {
     clone.style.top = `${startRect.top}px`;
     clone.style.margin = '0';
     clone.style.zIndex = '9999';
-    clone.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
-    // It starts face down (not flipped), but wait, createCard doesn't add 'flipped' by default?
-    // Wait, createCard sets 'flipped' class based on card.isFlipped? No, let's just make sure it's not flipped.
-    clone.classList.remove('flipped'); // actually in our css .card has no back visible unless flipped? 
-    // wait, That's Not a Hat has cards face down in the deck. We should show the back.
-    // Let me check createCard behavior.
+    clone.style.transition = 'none'; // Start without transition
+    clone.classList.remove('flipped'); 
+    
     document.body.appendChild(clone);
+    
+    // Force layout so the initial position is applied before transitioning
+    clone.getBoundingClientRect();
+    
+    // Now add transition
+    clone.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
 
     // Pop the top card from client deck
     state.gameState.deck.pop();
