@@ -25,16 +25,17 @@ export class VoiceChat {
                 this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 this.isMicEnabled = true;
                 
-                // Add tracks to existing peers
+                // Add tracks to existing peers without renegotiation
                 for (const peer of this.peers.values()) {
-                    this.localStream.getTracks().forEach(track => {
-                        // Only add if not already added
-                        const senders = peer.getSenders();
-                        const alreadyAdded = senders.find(s => s.track === track);
-                        if (!alreadyAdded) {
-                            peer.addTrack(track, this.localStream);
+                    const audioTrack = this.localStream.getAudioTracks()[0];
+                    if (audioTrack) {
+                        const transceiver = peer.getTransceivers().find(t => t.receiver.track.kind === 'audio' || (t.sender && t.sender.track && t.sender.track.kind === 'audio') || true);
+                        // In WebRTC, if we added a transceiver earlier, we can just replace the track
+                        const audioTransceivers = peer.getTransceivers();
+                        if (audioTransceivers.length > 0 && audioTransceivers[0].sender) {
+                            audioTransceivers[0].sender.replaceTrack(audioTrack);
                         }
-                    });
+                    }
                 }
             } catch (err) {
                 console.error('Failed to get microphone:', err);
@@ -131,13 +132,12 @@ export class VoiceChat {
             this.localStream.getTracks().forEach(track => {
                 peer.addTrack(track, this.localStream);
             });
+        } else {
+            // Pre-create an audio transceiver so we can replaceTrack later without renegotiation!
+            peer.addTransceiver('audio', { direction: 'sendrecv' });
         }
 
         if (isInitiator) {
-            // Note: need to ensure there is at least one track or transceiver to trigger ICE candidate generation in some browsers?
-            // Actually, if we don't have a track yet (mic not enabled), we should add a transceiver for audio to receive!
-            peer.addTransceiver('audio', { direction: 'recvonly' });
-            
             peer.createOffer()
                 .then(offer => peer.setLocalDescription(offer))
                 .then(() => {
