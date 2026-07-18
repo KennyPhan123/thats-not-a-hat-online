@@ -3,6 +3,7 @@ import { GameState, generateRoomCode } from './game.js';
 import { renderPlayers } from './player.js';
 import { createCard, setupFlipHandler } from './card.js';
 import { DragHandler } from './drag.js';
+import { initAudio, playSound } from './audio.js';
 import PartySocket from 'partysocket';
 
 // Use deployed PartyKit server
@@ -194,6 +195,7 @@ function copyRoomCode() {
 }
 
 function connectToRoom() {
+    initAudio();
     state.socket = new PartySocket({
         host: PARTYKIT_HOST,
         room: state.roomCode
@@ -640,6 +642,7 @@ function handleCardFlipped(data) {
             if (cardSlot) {
                 const card = cardSlot.querySelector('.card');
                 if (card) {
+                    playSound('flip', 0.6);
                     if (data.isFlipped) {
                         card.classList.add('flipped');
                     } else {
@@ -671,6 +674,7 @@ function handleCardDiscarded(data) {
 }
 
 function handleCardMoved(data) {
+    playSound('deal', 0.5);
     // Find the old card element
     const oldPlayerSlot = document.querySelector(`.player-slot[data-player-id="${data.fromPlayerId}"]`);
     const oldCardSlot = oldPlayerSlot?.querySelector(`.card-slot[data-slot-index="${data.fromSlot}"]`);
