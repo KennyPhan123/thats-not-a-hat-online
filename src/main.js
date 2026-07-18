@@ -304,8 +304,10 @@ function updatePlayerList() {
         elements.timerSetting.classList.remove('hidden');
         elements.waitingText.classList.add('hidden');
     } else if (state.isHost) {
+        elements.startGame.classList.add('hidden');
         elements.hardModeToggle.classList.remove('hidden');
         elements.timerSetting.classList.remove('hidden');
+        elements.waitingText.classList.add('hidden');
     } else if (!state.isHost) {
         elements.waitingText.classList.remove('hidden');
         elements.hardModeToggle.classList.add('hidden');
