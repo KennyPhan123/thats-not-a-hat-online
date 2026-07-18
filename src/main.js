@@ -663,12 +663,65 @@ function handleCardsSwapped(data) {
 }
 
 function handleCardDiscarded(data) {
+    playSound('deal', 0.5);
+
+    // Find the old card element before re-rendering
+    const oldPlayerSlot = document.querySelector(`.player-slot[data-player-id="${data.playerId}"]`);
+    const oldCardSlot = oldPlayerSlot?.querySelector(`.card-slot[data-slot-index="${data.slotIndex}"]`);
+    const oldCard = oldCardSlot?.querySelector('.card');
+    
+    let clone = null;
+    if (oldCard) {
+        const rect = oldCard.getBoundingClientRect();
+        clone = oldCard.cloneNode(true);
+        clone.style.position = 'fixed';
+        clone.style.left = `${rect.left}px`;
+        clone.style.top = `${rect.top}px`;
+        clone.style.margin = '0';
+        clone.style.zIndex = '9999';
+        clone.style.transition = 'all 0.5s cubic-bezier(0.5, 0, 0.2, 1)';
+        document.body.appendChild(clone);
+    }
+
     state.gameState.players = data.players;
     state.discardHistory = data.discardHistory;
-
     renderGame();
-
-    if (data.gameOver) {
+    
+    // Trigger Effects
+    if (clone) {
+        const penaltyZone = elements.penaltyZone;
+        const pRect = penaltyZone.getBoundingClientRect();
+        const targetX = pRect.left + pRect.width / 2 - clone.offsetWidth / 2;
+        const targetY = pRect.top + pRect.height / 2 - clone.offsetHeight / 2;
+        
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                clone.style.left = `${targetX}px`;
+                clone.style.top = `${targetY}px`;
+                clone.classList.add('void-suck');
+                
+                // Add screen shake and vignette
+                elements.gameTable.classList.add('shake-effect');
+                const vignette = document.getElementById('vignetteOverlay');
+                if (vignette) vignette.classList.add('vignette-effect');
+                
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate([150, 50, 150]);
+                }
+                
+                setTimeout(() => {
+                    clone.remove();
+                    elements.gameTable.classList.remove('shake-effect');
+                    if (vignette) vignette.classList.remove('vignette-effect');
+                    
+                    if (data.gameOver) {
+                        showGameOver(data.loserName);
+                    }
+                }, 500);
+            });
+        });
+    } else if (data.gameOver) {
         showGameOver(data.loserName);
     }
 }
