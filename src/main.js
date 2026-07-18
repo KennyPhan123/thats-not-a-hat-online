@@ -296,6 +296,18 @@ function handleServerMessage(data) {
             state.gameState.deck = data.state.deck || [];
             state.gameState.hostId = data.state.hostId;
             state.gameState.gameStarted = data.state.gameStarted;
+            state.hardMode = data.state.hardMode || false;
+            state.slotCount = data.state.slotCount || 2;
+            state.timerDuration = data.state.timerDuration || 0;
+            
+            // Sync UI
+            if (elements.hardModeCheckbox) {
+                elements.hardModeCheckbox.checked = state.hardMode;
+            }
+            if (elements.timerDurationSelect) {
+                elements.timerDurationSelect.value = state.timerDuration;
+            }
+
             if (data.state.gameStarted) {
                 startGame();
             }
@@ -381,7 +393,8 @@ function handleServerMessage(data) {
         case 'timerStarted':
             state.timers[data.playerId] = {
                 duration: data.duration,
-                endTime: data.endTime
+                // Compute locally to avoid server-client clock skew
+                endTime: Date.now() + (data.duration * 1000)
             };
             if (state.gameState.gameStarted) renderGame();
             break;
