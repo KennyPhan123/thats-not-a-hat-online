@@ -3,7 +3,7 @@
 An interactive online card game for 2-8 players. A sandbox-style implementation where players interact freely, just like in real life.
 
 ## Online Play
-**Play here:** https://tnah.kennyphan123.partykit.dev
+The old `partykit.dev` address is no longer available. Deploy the project to Cloudflare Workers as described below to get a new URL.
 
 ## Setupt the Game
 
@@ -39,38 +39,39 @@ That's Not a Hat is a memory and bluffing card game. Players draw cards, remembe
 ## Tech Stack
 
 - **Frontend:** Vanilla JavaScript + Vite
-- **Backend:** PartyKit (WebSocket server)
-- **Hosting:** PartyKit Cloud
+- **Backend:** PartyServer (WebSocket rooms with Durable Objects)
+- **Hosting:** Cloudflare Workers and Workers Assets
 
 ## Local Development
 
 ### Prerequisites
 
-- Node.js 18+
-- npm
+- Node.js 22 or newer and npm
+- A Cloudflare account for deployment (the Workers Free plan supports SQLite-backed Durable Objects)
 
-### Setup
+### Run locally
 
 ```bash
-# Install dependencies
-npm install
-
-# Run development server
+npm ci
 npm run dev
-
-# Run PartyKit server locally
-npx partykit dev
 ```
 
-### Deploy
+Open the URL printed by Wrangler (normally `http://localhost:8787`). The command builds the site first, then runs the Worker and rooms locally. Re-run it after changing frontend files. The frontend and WebSockets must use the same host; use Wrangler rather than the Vite preview server to play.
+
+### Deploy to Cloudflare
+
+1. Create a Cloudflare account and enable Workers. Select the Free plan if desired; Cloudflare's free usage limits apply.
+2. In a terminal on your computer, run:
 
 ```bash
-# Build frontend
-npm run build
-
-# Deploy to PartyKit Cloud
-npx partykit deploy
+npm ci
+npx wrangler login
+npm run deploy
 ```
+
+3. Open and share the `https://...workers.dev` URL printed by Wrangler. If prompted, choose a workers.dev subdomain. The frontend automatically connects to the same host, so no URL needs to be hard-coded.
+
+The previous PartyKit hosted platform and its deployment command have shut down. Old room state is not migrated. Rooms in this app are kept in memory while connected, so a room may reset when the Worker restarts. If usage exceeds Cloudflare's free limits, service may be restricted; see [Cloudflare Workers pricing](https://workers.cloudflare.com/plans).
 
 ## Project Structure
 

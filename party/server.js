@@ -1,4 +1,6 @@
-// PartyKit Server for That's Not a Hat - Interactive Sandbox Mode
+import { Server, routePartykitRequest } from 'partyserver';
+
+// PartyServer for That's Not a Hat - Interactive Sandbox Mode
 // No automatic logic - players interact freely like in real life
 
 // Inline shuffle function (Fisher-Yates)
@@ -11,9 +13,12 @@ function shuffleArray(array) {
     return shuffled;
 }
 
-export default class GameServer {
-    constructor(room) {
-        this.room = room;
+export class GameServer extends Server {
+    // Game state and timers live in memory while clients are connected.
+    static options = { hibernate: false };
+
+    constructor(ctx, env) {
+        super(ctx, env);
         this.gameState = {
             players: [],
             deck: [],
@@ -34,7 +39,7 @@ export default class GameServer {
         }));
     }
 
-    onMessage(message, sender) {
+    onMessage(sender, message) {
         try {
             const data = JSON.parse(message);
 
@@ -117,7 +122,7 @@ export default class GameServer {
             this.gameState.hostId = sender.id;
         }
 
-        this.broadcast({
+        this.broadcastGame({
             type: 'playerJoined',
             player: this.gameState.players.find(p => p.id === sender.id),
             hostId: this.gameState.hostId,
@@ -138,7 +143,7 @@ export default class GameServer {
                 this.gameState.hostId = this.gameState.players[0].id;
             }
 
-            this.broadcast({
+            this.broadcastGame({
                 type: 'playerLeft',
                 playerId: sender.id,
                 hostId: this.gameState.hostId,
@@ -159,7 +164,7 @@ export default class GameServer {
         this.gameState.deck = shuffleArray(cards);
         this.gameState.gameStarted = true;
 
-        this.broadcast({
+        this.broadcastGame({
             type: 'gameStarted',
             deck: this.gameState.deck,
             players: this.gameState.players,
@@ -203,7 +208,7 @@ export default class GameServer {
         // Put card in the first empty slot (they stack from bottom up)
         player.cards[emptySlotIndex] = card;
 
-        this.broadcast({
+        this.broadcastGame({
             type: 'cardDrawn',
             playerId: sender.id,
             slotIndex: emptySlotIndex,
@@ -223,7 +228,7 @@ export default class GameServer {
 
         player.cards[data.slotIndex].isFlipped = !player.cards[data.slotIndex].isFlipped;
 
-        this.broadcast({
+        this.broadcastGame({
             type: 'cardFlipped',
             playerId: sender.id,
             slotIndex: data.slotIndex,
@@ -250,7 +255,7 @@ export default class GameServer {
         this.normalizePlayerCards(fromPlayer);
         this.normalizePlayerCards(toPlayer);
 
-        this.broadcast({
+        this.broadcastGame({
             type: 'cardMoved',
             fromPlayerId: data.fromPlayerId,
             fromSlot: data.fromSlot,
@@ -290,7 +295,7 @@ export default class GameServer {
             p.cards = newSlots;
         });
 
-        this.broadcast({
+        this.broadcastGame({
             type: 'hardModeChanged',
             hardMode: this.gameState.hardMode,
             slotCount: this.gameState.slotCount,
@@ -302,7 +307,7 @@ export default class GameServer {
         if (sender.id !== this.gameState.hostId) return;
         if (this.gameState.gameStarted) return;
         this.gameState.timerDuration = parseInt(data.duration, 10) || 0;
-        this.broadcast({
+        this.broadcastGame({
             type: 'timerChanged',
             timerDuration: this.gameState.timerDuration
         });
@@ -322,7 +327,7 @@ export default class GameServer {
                 endTime,
                 timeout: setTimeout(() => this.handleTimeout(player.id), durationMs)
             };
-            this.broadcast({
+            this.broadcastGame({
                 type: 'timerStarted',
                 playerId: player.id,
                 duration: this.gameState.timerDuration,
@@ -331,7 +336,7 @@ export default class GameServer {
         } else if (!isFull && this.timers[player.id]) {
             clearTimeout(this.timers[player.id].timeout);
             delete this.timers[player.id];
-            this.broadcast({
+            this.broadcastGame({
                 type: 'timerCancelled',
                 playerId: player.id
             });
@@ -371,7 +376,7 @@ export default class GameServer {
         
         delete this.timers[playerId];
         
-        this.broadcast({
+        this.broadcastGame({
             type: 'cardDiscarded',
             playerId,
             slotIndex: discardSlot,
@@ -396,7 +401,7 @@ export default class GameServer {
 
         [player.cards[0], player.cards[1]] = [player.cards[1], player.cards[0]];
 
-        this.broadcast({
+        this.broadcastGame({
             type: 'cardsSwapped',
             playerId: data.playerId,
             cards: player.cards
@@ -426,7 +431,7 @@ export default class GameServer {
 
         const gameOver = player.penalties >= 3;
 
-        this.broadcast({
+        this.broadcastGame({
             type: 'cardDiscarded',
             playerId: data.playerId,
             slotIndex: data.slotIndex,
@@ -457,7 +462,7 @@ export default class GameServer {
         const cards = this.generateCards();
         this.gameState.deck = shuffleArray(cards);
 
-        this.broadcast({
+        this.broadcastGame({
             type: 'gameReset',
             deck: this.gameState.deck,
             players: this.gameState.players,
@@ -467,12 +472,12 @@ export default class GameServer {
         });
     }
 
-    broadcast(message) {
-        this.room.broadcast(JSON.stringify(message));
+    broadcastGame(message) {
+        this.broadcast(JSON.stringify(message));
     }
     handleWebRTCSignal(data, sender) {
         // Forward WebRTC signaling messages directly to the target peer
-        const targetConnection = Array.from(this.room.getConnections()).find(c => c.id === data.targetId);
+        const targetConnection = Array.from(this.getConnections()).find(c => c.id === data.targetId);
         if (targetConnection) {
             targetConnection.send(JSON.stringify({
                 type: 'webrtc-signal',
@@ -482,3 +487,10 @@ export default class GameServer {
         }
     }
 }
+
+// Static assets are served by Workers Assets; only room requests reach here.
+export default {
+    async fetch(request, env) {
+        return (await routePartykitRequest(request, env)) || new Response('Not Found', { status: 404 });
+    }
+};

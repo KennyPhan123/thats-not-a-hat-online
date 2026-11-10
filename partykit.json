@@ -1,6 +1,0 @@
-{
-    "name": "tnah",
-    "main": "party/server.js",
-    "compatibilityDate": "2025-12-22",
-    "serve": "./dist"
-}
