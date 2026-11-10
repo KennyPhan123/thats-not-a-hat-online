@@ -3,17 +3,16 @@
     "version": "1.0.0",
     "type": "module",
     "scripts": {
-        "dev": "vite",
-        "dev:party": "partykit dev",
-        "dev:all": "start cmd /c \"npm run dev:party\" && npm run dev",
+        "dev": "npm run build && wrangler dev --ip 0.0.0.0",
         "build": "vite build",
-        "preview": "vite preview"
+        "deploy": "npm run build && wrangler deploy"
     },
     "dependencies": {
+        "partyserver": "^0.5.10",
         "partysocket": "^1.0.1"
     },
     "devDependencies": {
-        "partykit": "^0.0.115",
-        "vite": "^5.4.11"
+        "vite": "^5.4.11",
+        "wrangler": "^4.159.0"
     }
 }

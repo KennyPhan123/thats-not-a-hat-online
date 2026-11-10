@@ -7,8 +7,8 @@ import { initAudio, playSound } from './audio.js';
 import { VoiceChat } from './webrtc.js';
 import PartySocket from 'partysocket';
 
-// Use deployed PartyKit server
-const PARTYKIT_HOST = 'tnah.kennyphan123.partykit.dev';
+// The Worker serves both the site and the room WebSockets on the same host.
+const PARTYKIT_HOST = window.location.host;
 
 // WebRTC instance
 const voiceChat = new VoiceChat();
