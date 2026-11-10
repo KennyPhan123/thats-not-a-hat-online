@@ -94,3 +94,5 @@ The previous PartyKit hosted platform and its deployment command have shut down.
 ## License
 
 MIT
+
+Deployed with Cloudflare Workers.
